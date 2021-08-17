@@ -3,6 +3,9 @@ from restapi import models
 from django.urls import reverse
 
 
+RESTAPI_ALIAS = "restapi:expense-list-create"
+
+
 class TestModels(TestCase):
     def test_expense(self):
         expense = models.Expense.objects.create(
@@ -22,28 +25,26 @@ class TestModels(TestCase):
 class TestViews(TestCase):
     def test_expense_create(self):
         payload = {
-            "amount": 50,
+            "amount": 50.0,
             "merchant": "AT&T",
             "description": "cell phone subscription",
             "category": "utilities",
         }
 
-        res = self.client.post(
-            reverse("restapi:expense-list-create"), payload, format="json"
-        )
+        res = self.client.post(reverse(RESTAPI_ALIAS), payload, format="json")
 
         self.assertEqual(201, res.status_code)
 
         json_res = res.json()
 
-        self.assertEqual(str(payload["amount"]), json_res["amount"])
+        self.assertEqual(payload["amount"], json_res["amount"])
         self.assertEqual(payload["merchant"], json_res["merchant"])
         self.assertEqual(payload["description"], json_res["description"])
         self.assertEqual(payload["category"], json_res["category"])
         self.assertIsInstance(json_res["id"], int)
 
     def test_expense_list(self):
-        res = self.client.get(reverse("restapi:expense-list-create"), format="json")
+        res = self.client.get(reverse(RESTAPI_ALIAS), format="json")
 
         self.assertEqual(200, res.status_code)
 
@@ -54,3 +55,14 @@ class TestViews(TestCase):
         expenses = models.Expense.objects.all()
 
         self.assertEqual(len(expenses), len(json_res))
+
+    def test_expense_create_required_fields_missing(self):
+        payload = {
+            "merchant": "AT&T",
+            "description": "cell phone subscription",
+            "category": "utilities",
+        }
+
+        res = self.client.post(reverse(RESTAPI_ALIAS), payload, format="json")
+
+        self.assertEqual(400, res.status_code)
