@@ -3,7 +3,8 @@ from restapi import models
 from django.urls import reverse
 
 
-RESTAPI_ALIAS = "restapi:expense-list-create"
+RESTAPI_LIST_CREATE = "restapi:expense-list-create"
+RESTAPI_RETRIEVE_DELETE = "restapi:expense-retrieve-delete"
 
 
 class TestModels(TestCase):
@@ -12,7 +13,7 @@ class TestModels(TestCase):
             amount=249.99,
             merchant="amazon",
             description="anc headphones",
-            category="music",
+            category="music"
         )
         inserted_expense = models.Expense.objects.get(id=expense.id)
 
@@ -30,8 +31,7 @@ class TestViews(TestCase):
             "description": "cell phone subscription",
             "category": "utilities",
         }
-
-        res = self.client.post(reverse(RESTAPI_ALIAS), payload, format="json")
+        res = self.client.post(reverse(RESTAPI_LIST_CREATE), payload, format="json")
 
         self.assertEqual(201, res.status_code)
 
@@ -44,7 +44,7 @@ class TestViews(TestCase):
         self.assertIsInstance(json_res["id"], int)
 
     def test_expense_list(self):
-        res = self.client.get(reverse(RESTAPI_ALIAS), format="json")
+        res = self.client.get(reverse(RESTAPI_LIST_CREATE), format="json")
 
         self.assertEqual(200, res.status_code)
 
@@ -62,7 +62,27 @@ class TestViews(TestCase):
             "description": "cell phone subscription",
             "category": "utilities",
         }
-
-        res = self.client.post(reverse(RESTAPI_ALIAS), payload, format="json")
+        res = self.client.post(reverse(RESTAPI_LIST_CREATE), payload, format="json")
 
         self.assertEqual(400, res.status_code)
+
+    def test_expense_retrieve(self):
+        expense = models.Expense.objects.create(amount=300, merchant="George", description="loan", category="transfer")
+        res = self.client.get(reverse(RESTAPI_RETRIEVE_DELETE, args=[expense.id]), format="json")
+
+        self.assertEqual(200, res.status_code)
+
+        json_res = res.json()
+
+        self.assertEqual(expense.id, json_res["id"])
+        self.assertEqual(expense.amount, json_res["amount"])
+        self.assertEqual(expense.merchant, json_res["merchant"])
+        self.assertEqual(expense.description, json_res["description"])
+        self.assertEqual(expense.category, json_res["category"])
+
+    def test_expense_delete(self):
+        expense = models.Expense.objects.create(amount=400, merchant="John", description="loan", category="transfer")
+        res = self.client.delete(reverse(RESTAPI_RETRIEVE_DELETE, args=[expense.id]), format="json")
+
+        self.assertEqual(204, res.status_code)
+        self.assertFalse(models.Expense.objects.filter(pk=expense.id).exists())        
